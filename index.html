@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ShopEasy — Demo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    /* Basic layout + styles (kept concise for readability) */
+    body { font-family: Arial, sans-serif; margin:0; background:#f4f4f4; color:#212121; }
+    header { background:#232f3e; color:#fff; padding:12px 20px; display:flex; gap:20px; align-items:center; position:sticky; top:0; z-index:20; }
+    .logo { font-weight:700; font-size:20px; display:flex; align-items:center; gap:10px; }
+    .search-wrapper { flex:1; display:flex; align-items:center; }
+    .search-wrapper input { width:100%; padding:10px 14px; border-radius:4px 0 0 4px; border:none; font-size:14px; }
+    .search-wrapper button { padding:10px 14px; border:none; background:#ffa41c; color:#000; border-radius:0 4px 4px 0; cursor:pointer; }
+    nav { display:flex; gap:12px; align-items:center; }
+    nav a { color:#fff; text-decoration:none; font-size:14px; }
+    .cart-count { background:#ff4d4f; color:#fff; padding:2px 7px; border-radius:50%; font-size:12px; margin-left:6px; vertical-align:middle; }
+    .container { display:flex; gap:20px; padding:20px; max-width:1200px; margin:0 auto; }
+    .sidebar { width:240px; background:#fff; padding:16px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.06); height:fit-content; }
+    .sidebar h3 { margin:0 0 10px 0; font-size:16px; }
+    .sidebar label { display:block; margin-bottom:8px; font-size:14px; cursor:pointer; }
+    .main { flex:1; }
+    .controls { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:12px; }
+    .products-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:18px; }
+    .product { background:#fff; border-radius:8px; padding:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); display:flex; flex-direction:column; position:relative; }
+    .product img { width:100%; height:160px; object-fit:cover; border-radius:6px; }
+    .product-title { margin:10px 0 6px; font-weight:600; font-size:15px; min-height:40px; }
+    .product-price { font-weight:700; color:#d32f2f; }
+    .original-price { text-decoration:line-through; color:#777; font-weight:500; margin-left:8px; font-size:13px; }
+    .discount { color:#2e7d32; margin-left:8px; font-size:13px; }
+    .product-rating { color:#ffa41c; margin-top:8px; font-size:13px; }
+    .product-actions { margin-top:auto; display:flex; gap:8px; align-items:center; }
+    .add-to-cart { background:#ffa41c; border:none; padding:8px 10px; border-radius:6px; cursor:pointer; font-weight:600; }
+    .wishlist { background:none; border:none; cursor:pointer; font-size:18px; color:#e53935; }
+    /* Checkout modal */
+    #checkout-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:30; }
+    #checkout-content { background:#fff; width:420px; border-radius:8px; padding:18px; }
+    .checkout-step { display:none; }
+    .checkout-step.active { display:block; }
+    .checkout-buttons { display:flex; justify-content:space-between; margin-top:14px; }
+    .btn { padding:8px 12px; border-radius:6px; border:none; cursor:pointer; }
+    .btn-primary { background:#232f3e; color:#fff; }
+    .btn-secondary { background:#eee; color:#222; }
+    /* notification */
+    .notification { position:fixed; right:18px; bottom:18px; background:#2e7d32; color:#fff; padding:10px 14px; border-radius:6px; display:none; z-index:40; box-shadow:0 3px 10px rgba(0,0,0,0.18); }
+    /* responsive */
+    @media (max-width: 900px) {
+      .container { padding:14px; flex-direction:column; }
+      .sidebar { width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo"><i class="fas fa-shopping-bag"></i> ShopEasy</div>
+
+    <!-- SEARCH BAR -->
+    <div class="search-wrapper" role="search">
+      <input id="search-input" type="search" placeholder="Search for products, brands and more..." aria-label="Search products">
+      <button id="search-btn" aria-label="Search"><i class="fas fa-search"></i></button>
+    </div>
+
+    <nav>
+      <a href="#">Home</a>
+      <a href="#" id="cart-link"><i class="fas fa-shopping-cart"></i> Cart <span class="cart-count">0</span></a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <!-- SIDEBAR FILTERS -->
+    <aside class="sidebar" aria-label="Filters">
+      <h3>Filters</h3>
+
+      <strong>Category</strong>
+      <label><input type="checkbox" class="filter-category" value="electronics"> Electronics</label>
+      <label><input type="checkbox" class="filter-category" value="fashion"> Fashion</label>
+      <label><input type="checkbox" class="filter-category" value="home"> Home & Kitchen</label>
+      <label><input type="checkbox" class="filter-category" value="books"> Books</label>
+
+      <hr>
+
+      <strong>Brand</strong>
+      <label><input type="checkbox" class="filter-brand" value="Samsung"> Samsung</label>
+      <label><input type="checkbox" class="filter-brand" value="Apple"> Apple</label>
+      <label><input type="checkbox" class="filter-brand" value="Nike"> Nike</label>
+      <label><input type="checkbox" class="filter-brand" value="Sony"> Sony</label>
+
+      <hr>
+
+      <strong>Customer Rating</strong>
+      <label><input type="checkbox" class="filter-rating" value="4"> 4★ & above</label>
+      <label><input type="checkbox" class="filter-rating" value="3"> 3★ & above</label>
+
+      <hr>
+
+      <strong>Price</strong>
+      <input id="price-range" type="range" min="0" max="50000" value="50000" style="width:100%;">
+      <div style="display:flex; justify-content:space-between; font-size:13px; margin-top:6px;">
+        <span>₹0</span><span id="price-max">₹50,000</span>
+      </div>
+    </aside>
+
+    <!-- MAIN / PRODUCTS -->
+    <main class="main" role="main">
+      <div class="controls">
+        <div style="font-size:14px; color:#666;" id="results-count">Showing 0 products</div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <label for="sort" style="font-size:14px; color:#333;">Sort by</label>
+          <select id="sort" style="padding:8px 10px; border-radius:6px; border:1px solid #ddd;">
+            <option value="default">Default</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+            <option value="rating">Customer Rating</option>
+            <option value="newest">Newest First</option>
+          </select>
+        </div>
+      </div>
+
+      <section class="products-grid" id="products" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <!-- CHECKOUT MODAL -->
+  <div id="checkout-modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div id="checkout-content">
+      <h2>Checkout</h2>
+
+      <div class="checkout-step step-1 active">
+        <h4>Information</h4>
+        <label>Email<input id="checkout-email" type="email" style="width:100%;padding:8px;margin-top:6px;"></label>
+        <label>Phone<input id="checkout-phone" type="tel" style="width:100%;padding:8px;margin-top:6px;"></label>
+      </div>
+
+      <div class="checkout-step step-2">
+        <h4>Shipping</h4>
+        <input id="ship-name" placeholder="Full name" style="width:100%;padding:8px;margin-bottom:8px;">
+        <input id="ship-address" placeholder="Address" style="width:100%;padding:8px;margin-bottom:8px;">
+      </div>
+
+      <div class="checkout-step step-3">
+        <h4>Payment</h4>
+        <select id="payment-method" style="width:100%;padding:8px;">
+          <option value="card">Credit/Debit Card</option>
+          <option value="upi">UPI</option>
+          <option value="cod">Cash on Delivery</option>
+        </select>
+      </div>
+
+      <div class="checkout-step step-4">
+        <h4>Confirmation</h4>
+        <div id="order-confirmation">Your order summary will appear here.</div>
+      </div>
+
+      <div class="checkout-buttons">
+        <button class="btn btn-secondary" id="checkout-back">Back</button>
+        <button class="btn btn-primary" id="checkout-next">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="notification" id="notification" role="status" aria-live="polite"></div>
+
+  <script>
+    /**************************************************************************
+     * Data + State
+     **************************************************************************/
+    const products = [
+      { id:1, name:"Smart Watch Series 5 - Black", price:12999, originalPrice:18999, image:"https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=60", rating:4.5, category:"electronics", brand:"Apple", badge:"Popular", createdAt:"2025-01-10" },
+      { id:2, name:"Sports Running Shoes - Men", price:3499, originalPrice:5999, image:"https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=60", rating:4.0, category:"fashion", brand:"Nike", badge:"Sale", createdAt:"2025-02-01" },
+      { id:3, name:"Wireless Bluetooth Headphones", price:2999, originalPrice:4499, image:"https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800&q=60", rating:4.8, category:"electronics", brand:"Sony", badge:"Bestseller", createdAt:"2025-03-12" },
+      { id:4, name:"Designer Sunglasses - Premium", price:1799, originalPrice:2999, image:"https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800&q=60", rating:3.5, category:"fashion", brand:"Ray-Ban", createdAt:"2025-01-20" },
+      { id:5, name:"Smartphone 128GB - Midnight Blue", price:24999, originalPrice:32999, image:"https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=800&q=60", rating:4.7, category:"electronics", brand:"Samsung", badge:"New", createdAt:"2025-04-05" },
+      { id:6, name:"Casual T-Shirt - Cotton Blend", price:899, originalPrice:1499, image:"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&q=60", rating:4.2, category:"fashion", brand:"H&M", badge:"Sale", createdAt:"2024-12-10" },
+      { id:7, name:"Non-Stick Cookware Set - 5 Pieces", price:3999, originalPrice:5999, image:"https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=60", rating:4.3, category:"home", brand:"Prestige", createdAt:"2025-03-22" },
+      { id:8, name:"Best Selling Novel - Hardcover", price:499, originalPrice:799, image:"https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=800&q=60", rating:4.6, category:"books", brand:"Penguin", badge:"Bestseller", createdAt:"2024-11-05" }
+    ];
+
+    let cart = [];
+    let filteredProducts = [...products]; // products after filters/search/sort
+    let checkoutStep = 1;
+
+    /**************************************************************************
+     * DOM refs
+     **************************************************************************/
+    const productsGrid = document.getElementById('products');
+    const resultsCount = document.getElementById('results-count');
+    const cartCountEl = document.querySelector('.cart-count');
+    const cartLink = document.getElementById('cart-link');
+    const checkoutModal = document.getElementById('checkout-modal');
+    const notification = document.getElementById('notification');
+
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
+    const categoryFilters = document.querySelectorAll('.filter-category');
+    const brandFilters = document.querySelectorAll('.filter-brand');
+    const ratingFilters = document.querySelectorAll('.filter-rating');
+    const priceRange = document.getElementById('price-range');
+    const priceMaxLabel = document.getElementById('price-max');
+    const sortSelect = document.getElementById('sort');
+
+    // Checkout refs
+    const checkoutSteps = document.querySelectorAll('.checkout-step');
+    const checkoutNext = document.getElementById('checkout-next');
+    const checkoutBack = document.getElementById('checkout-back');
+    const orderConfirmation = document.getElementById('order-confirmation');
+
+    /**************************************************************************
+     * Render functions
+     **************************************************************************/
+    function renderProducts(list = filteredProducts) {
+      productsGrid.innerHTML = '';
+      if (!list.length) {
+        productsGrid.innerHTML = '<div style="padding:24px;background:#fff;border-radius:8px;">No products found.</div>';
+      }
+
+      list.forEach(product => {
+        const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+        const card = document.createElement('div');
+        card.className = 'product';
+        card.innerHTML = `
+          ${product.badge ? `<div style="position:absolute;left:12px;top:12px;background:#fb641b;color:#fff;padding:6px 8px;border-radius:6px;font-size:12px;font-weight:600;">${product.badge}</div>` : ''}
+          <img src="${product.image}" alt="${escapeHtml(product.name)}">
+          <div class="product-title">${escapeHtml(product.name)}</div>
+          <div>
+            <span class="product-price">₹${product.price.toLocaleString()}</span>
+            <span class="original-price">₹${product.originalPrice.toLocaleString()}</span>
+            <span class="discount">${discount}% off</span>
+          </div>
+          <div class="product-rating">${renderStars(product.rating)} <span style="color:#666;font-size:13px;margin-left:6px">(${product.rating.toFixed(1)})</span></div>
+          <div class="product-actions">
+            <button class="add-to-cart" data-id="${product.id}">Add to Cart</button>
+            <button class="wishlist" aria-label="Wishlist"><i class="far fa-heart"></i></button>
+          </div>
+        `;
+        productsGrid.appendChild(card);
+      });
+
+      // Update results count
+      resultsCount.textContent = `Showing ${list.length} product${list.length !== 1 ? 's' : ''}`;
+
+      // attach add-to-cart listeners
+      document.querySelectorAll('.add-to-cart').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = Number(e.currentTarget.dataset.id);
+          addToCart(id);
+        });
+      });
+
+      // wishlist toggle
+      document.querySelectorAll('.wishlist').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const icon = btn.querySelector('i');
+          if (icon.classList.contains('far')) {
+            icon.classList.remove('far'); icon.classList.add('fas'); btn.style.color = '#e53935';
+            showNotification('Added to wishlist');
+          } else {
+            icon.classList.remove('fas'); icon.classList.add('far'); btn.style.color = '';
+          }
+        });
+      });
+    }
+
+    function renderStars(rating) {
+      const full = Math.floor(rating);
+      const half = rating % 1 >= 0.5;
+      let out = '';
+      for (let i=0;i<full;i++) out += '★';
+      if (half) out += '☆'; // keeping ASCII-like star for appearance
+      for (let i=0;i<5-full-(half?1:0);i++) out += '☆';
+      return `<span style="color:#ffa41c;font-weight:700">${out}</span>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    /**************************************************************************
+     * Cart functions
+     **************************************************************************/
+    function addToCart(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+      const existing = cart.find(c => c.id === productId);
+      if (existing) existing.quantity += 1;
+      else cart.push({ id: product.id, name: product.name, price: product.price, image: product.image, quantity: 1 });
+      updateCartCount();
+      showNotification(`${product.name} added to cart!`);
+    }
+
+    function updateCartCount() {
+      const total = cart.reduce((s, i) => s + i.quantity, 0);
+      cartCountEl.textContent = total;
+    }
+
+    /**************************************************************************
+     * Filtering / Sorting / Searching
+     **************************************************************************/
+    function applyAllFilters() {
+      const searchTerm = searchInput.value.trim().toLowerCase();
+      const selectedCats = [...categoryFilters].filter(c => c.checked).map(c => c.value);
+      const selectedBrands = [...brandFilters].filter(b => b.checked).map(b => b.value);
+      const selectedRatings = [...ratingFilters].filter(r => r.checked).map(r => Number(r.value));
+      const maxPrice = Number(priceRange.value);
+
+      let result = products.filter(p => {
+        // price cap
+        if (p.price > maxPrice) return false;
+        // category
+        if (selectedCats.length && !selectedCats.includes(p.category)) return false;
+        // brand
+        if (selectedBrands.length && !selectedBrands.includes(p.brand)) return false;
+        // rating
+        if (selectedRatings.length && !selectedRatings.some(r => p.rating >= r)) return false;
+        // search
+        if (searchTerm && !p.name.toLowerCase().includes(searchTerm) && !p.brand.toLowerCase().includes(searchTerm)) return false;
+        return true;
+      });
+
+      // Sorting
+      const sortVal = sortSelect.value;
+      if (sortVal === 'price-low') result.sort((a,b) => a.price - b.price);
+      else if (sortVal === 'price-high') result.sort((a,b) => b.price - a.price);
+      else if (sortVal === 'rating') result.sort((a,b) => b.rating - a.rating);
+      else if (sortVal === 'newest') result.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      filteredProducts = result;
+      renderProducts(filteredProducts);
+    }
+
+    // wire filter inputs
+    categoryFilters.forEach(f => f.addEventListener('change', applyAllFilters));
+    brandFilters.forEach(f => f.addEventListener('change', applyAllFilters));
+    ratingFilters.forEach(f => f.addEventListener('change', applyAllFilters));
+    priceRange.addEventListener('input', () => {
+      priceMaxLabel.textContent = `₹${Number(priceRange.value).toLocaleString()}`;
+      applyAllFilters();
+    });
+    sortSelect.addEventListener('change', applyAllFilters);
+
+    // search: listen to input + search button
+    searchInput.addEventListener('input', () => {
+      // live search as user types
+      applyAllFilters();
+    });
+    searchBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      applyAllFilters();
+    });
+
+    /**************************************************************************
+     * Checkout flow (modal multi-step)
+     **************************************************************************/
+    cartLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      openCheckout();
+    });
+
+    function openCheckout() {
+      checkoutModal.style.display = 'flex';
+      checkoutModal.setAttribute('aria-hidden', 'false');
+      checkoutStep = 1;
+      showCheckoutStep(checkoutStep);
+      populateOrderConfirmation();
+    }
+
+    function closeCheckout() {
+      checkoutModal.style.display = 'none';
+      checkoutModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function showCheckoutStep(step) {
+      checkoutSteps.forEach((el, idx) => {
+        el.classList.toggle('active', idx === step - 1);
+      });
+      // update Next/Back button labels on final step
+      if (step === checkoutSteps.length) {
+        checkoutNext.textContent = 'Place Order';
+      } else {
+        checkoutNext.textContent = 'Next';
+      }
+      checkoutBack.style.visibility = step === 1 ? 'hidden' : 'visible';
+    }
+
+    checkoutNext.addEventListener('click', () => {
+      if (checkoutStep < checkoutSteps.length) {
+        checkoutStep++;
+        showCheckoutStep(checkoutStep);
+        if (checkoutStep === checkoutSteps.length) populateOrderConfirmation();
+      } else {
+        // place order
+        placeOrder();
+      }
+    });
+
+    checkoutBack.addEventListener('click', () => {
+      if (checkoutStep > 1) {
+        checkoutStep--;
+        showCheckoutStep(checkoutStep);
+      }
+    });
+
+    function populateOrderConfirmation() {
+      if (!cart.length) {
+        orderConfirmation.innerHTML = '<p>Your cart is empty.</p>';
+        return;
+      }
+      const rows = cart.map(i => `<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><div>${escapeHtml(i.name)} x ${i.quantity}</div><div>₹${(i.price * i.quantity).toLocaleString()}</div></div>`).join('');
+      const subtotal = cart.reduce((s,i) => s + i.price * i.quantity, 0);
+      const shipping = subtotal > 0 ? 40 : 0;
+      const tax = +(subtotal * 0.18).toFixed(2);
+      const total = subtotal + shipping + tax;
+      orderConfirmation.innerHTML = `${rows}
+        <hr>
+        <div style="display:flex;justify-content:space-between"><strong>Subtotal</strong><strong>₹${subtotal.toLocaleString()}</strong></div>
+        <div style="display:flex;justify-content:space-between"><span>Shipping</span><span>₹${shipping.toLocaleString()}</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Tax (18%)</span><span>₹${tax.toLocaleString()}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:16px;margin-top:8px"><strong>Total</strong><strong>₹${total.toLocaleString()}</strong></div>
+      `;
+    }
+
+    function placeOrder() {
+      // simple success simulation
+      showNotification('Order placed successfully! Thank you.');
+      // reset cart
+      cart = [];
+      updateCartCount();
+      closeCheckout();
+    }
+
+    /**************************************************************************
+     * Utilities
+     **************************************************************************/
+    function showNotification(msg, timeout = 2000) {
+      notification.textContent = msg;
+      notification.style.display = 'block';
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, timeout);
+    }
+
+    /**************************************************************************
+     * Init
+     **************************************************************************/
+    // initial price range label
+    priceMaxLabel.textContent = `₹${Number(priceRange.value).toLocaleString()}`;
+
+    // initial render
+    applyAllFilters(); // will set filteredProducts and render
+
+    // close modal on overlay click (optional)
+    checkoutModal.addEventListener('click', (ev) => {
+      if (ev.target === checkoutModal) closeCheckout();
+    });
+
+    // keyboard: Esc closes checkout
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeCheckout();
+    });
+  </script>
+</body>
+</html>
